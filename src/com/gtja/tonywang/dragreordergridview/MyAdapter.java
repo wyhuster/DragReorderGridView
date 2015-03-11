@@ -79,4 +79,8 @@ public class MyAdapter extends BaseAdapter implements DragReorderListAdapter {
 		return !list.get(position).isFixed();
 	}
 
+	@Override
+	public boolean isRemovableItem(int position) {
+		return list.get(position).isRemovable();
+	}
 }

@@ -12,7 +12,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,8 +24,10 @@ import android.widget.AdapterView;
 import android.widget.GridView;
 
 /**
- * @author dongxinyu.dxy
+ * 可拖拽排序的gridview，支持添加和删除cell
  * 
+ * @author dongxinyu.dxy
+ * @author tonywang.wy
  */
 public class DragReorderGridView extends GridView {
 
@@ -38,13 +39,14 @@ public class DragReorderGridView extends GridView {
 	private DragReorderListener mDragReorderListener;
 
 	private boolean mEditModeEnabled = false;// 左上角删除按钮是否可用
-	private EditActionListener mEditActionListener;// 删除按钮的action监听器
 	private int mEditActionViewId;// 删除按钮的view id
 
 	private boolean mIsEditMode = false;
 	private int mEditingPosition = INVALID_POSITION;
 	private boolean mIsDragging = false;
 	private int mDraggingPosition = INVALID_POSITION;
+	private int mFirstDraggingPosition = INVALID_POSITION;
+	private int mLastDraggingPosition = INVALID_POSITION;
 
 	private BitmapDrawable mHoverView;
 	private int mHoverViewOffsetX = 0;
@@ -55,6 +57,8 @@ public class DragReorderGridView extends GridView {
 
 	private int mLastEventY = -1;// 最后touch位置的y坐标
 	private int mLastEventX = -1;// 最后touch位置的x坐标
+
+	private boolean mEnableItemClick = true;
 
 	public DragReorderGridView(Context context) {
 		this(context, null);
@@ -69,11 +73,15 @@ public class DragReorderGridView extends GridView {
 		init();
 	}
 
-	public void setDragReorderListener(DragReorderListener dragReorderListener) {
+	public void setDragReorderListener(int actionViewId,
+			DragReorderListener dragReorderListener) {
+		mEditModeEnabled = true;
+		mEditActionViewId = actionViewId;
 		mDragReorderListener = dragReorderListener;
 	}
 
 	/**
+	 * 返回gridview是否在edit状态<br>
 	 * not same as View.isInEditMode()
 	 * 
 	 * @return
@@ -83,21 +91,9 @@ public class DragReorderGridView extends GridView {
 	}
 
 	/**
-	 * 左上角的删除按钮
-	 * 
-	 * @param actionViewId
-	 * @param actionListener
-	 */
-	public void enableEditMode(int actionViewId,
-			EditActionListener actionListener) {
-		mEditModeEnabled = true;
-		mEditActionViewId = actionViewId;
-		mEditActionListener = actionListener;
-	}
-
-	/**
 	 * 初始化<br>
-	 * 设置long click listener<br>
+	 * 设置item long click listener<br>
+	 * 设置item click listener<br>
 	 * 设置scroll listener<br>
 	 * 设置mGridViewScrollStep变量
 	 */
@@ -108,20 +104,40 @@ public class DragReorderGridView extends GridView {
 			public boolean onItemLongClick(AdapterView<?> parent, View view,
 					int position, long id) {
 				if (!isReorderable(position)) {
-					return false;// 处理onclick事件
+					// return false;
+					return true;// 不处理onclick事件
 				}
 
-				notifyLongClicked();
+				notifyLongClicked(position);
 
-				if (mEditModeEnabled) {
+				if (mEditModeEnabled && isRemovable(position)) {
 					quitEditMode();
 					enterEditMode(position);
 				}
 
+				// 保存开始拖动的位置，在ACTION_UP的时候判断，是否拖动到新位置了
+				mFirstDraggingPosition = position;
 				startDrag(position);
 
 				return true;
 			}
+		});
+
+		setOnItemClickListener(new OnItemClickListener() {
+
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view,
+					int position, long id) {
+				// sometimes don't trigger itemClick,
+				// e.g. when the delete showing icon
+				if (mEnableItemClick) {
+					mDragReorderListener.onItemClicked(position);
+				} else {
+					mEnableItemClick = true;
+				}
+
+			}
+
 		});
 
 		setOnScrollListener(mScrollListener);
@@ -136,8 +152,8 @@ public class DragReorderGridView extends GridView {
 
 		@Override
 		public void onClick(View arg0) {
-			if (mEditActionListener != null) {
-				mEditActionListener.onEditAction(mEditingPosition);
+			if (mDragReorderListener != null) {
+				mDragReorderListener.onEditAction(mEditingPosition);
 			}
 			quitEditMode();
 		}
@@ -157,7 +173,7 @@ public class DragReorderGridView extends GridView {
 	 * 取消edit模式(取消左上角的delete按钮)
 	 */
 	public void quitEditMode() {
-		stopDrag();
+		// TODO stopDrag();
 
 		if (!mIsEditMode) {
 			return;
@@ -184,9 +200,10 @@ public class DragReorderGridView extends GridView {
 		}
 
 		mIsDragging = true;
-		createHoverDrawable(draggingView);
+
 		updateDraggingPosition(draggingPosition);
 		updateEditingPosition(draggingPosition);
+		createHoverDrawable(draggingView);
 	}
 
 	/**
@@ -222,19 +239,11 @@ public class DragReorderGridView extends GridView {
 			if (!mIsEditMode) {
 				break;
 			}
-
-			layoutChildren();
-			int position = pointToPosition((int) event.getX(),
-					(int) event.getY());
-			if (position != mEditingPosition) {
-				// touch的不是当前edit的item，则取消edit模式
-				quitEditMode();
-				break;
-			} else {
-				// touch的是当前edit的item，则开始drag
-				startDrag(position);
-				break;
-			}
+			mEnableItemClick = false;
+			// layoutChildren();
+			// 在edit模式下,再action down则取消edit模式
+			quitEditMode();
+			break;
 
 		case MotionEvent.ACTION_MOVE:
 			if (!mIsDragging) {
@@ -251,6 +260,9 @@ public class DragReorderGridView extends GridView {
 			return true;
 
 		case MotionEvent.ACTION_UP:
+			if (mLastDraggingPosition != mFirstDraggingPosition) {
+				quitEditMode();
+			}
 			finishDrag();
 			break;
 
@@ -302,6 +314,21 @@ public class DragReorderGridView extends GridView {
 		if (getAdapter() instanceof DragReorderListAdapter) {
 			return ((DragReorderListAdapter) getAdapter())
 					.isReorderableItem(position);
+		} else {
+			return true;
+		}
+	}
+
+	/**
+	 * 判断某位置item是否可以删除
+	 * 
+	 * @param position
+	 * @return
+	 */
+	private boolean isRemovable(int position) {
+		if (getAdapter() instanceof DragReorderListAdapter) {
+			return ((DragReorderListAdapter) getAdapter())
+					.isRemovableItem(position);
 		} else {
 			return true;
 		}
@@ -390,11 +417,11 @@ public class DragReorderGridView extends GridView {
 	 * 调用mDragReorderListener接口的onItemLongClicked方法
 	 * {@link DragReorderListener#onItemLongClicked()}
 	 */
-	private void notifyLongClicked() {
+	private void notifyLongClicked(int position) {
 		if (mDragReorderListener == null) {
 			return;
 		}
-		mDragReorderListener.onItemLongClicked();
+		mDragReorderListener.onItemLongClicked(position);
 	}
 
 	/**
@@ -530,6 +557,9 @@ public class DragReorderGridView extends GridView {
 	 * @param newPosition
 	 */
 	private void updateDraggingPosition(int newPosition) {
+		if (newPosition != INVALID_POSITION) {
+			mLastDraggingPosition = newPosition;
+		}
 		setCellDragging(mDraggingPosition, false);
 		mDraggingPosition = newPosition;
 		setCellDragging(mDraggingPosition, true);
@@ -555,6 +585,11 @@ public class DragReorderGridView extends GridView {
 	private void setCellEditing(int position, boolean isEditing) {
 		View editingCell = findViewByPosition(position);
 		if (editingCell == null || !(editingCell instanceof ViewGroup)) {
+			return;
+		}
+
+		if (!isRemovable(position) && isEditing) {
+			// 不可删除的item，不允许设置actionView可见
 			return;
 		}
 

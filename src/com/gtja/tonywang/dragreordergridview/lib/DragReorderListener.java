@@ -8,7 +8,7 @@ package com.gtja.tonywang.dragreordergridview.lib;
  * <p>
  * start drag
  * </p>
- * {@link DragReorderListener#onItemLongClicked()} s *
+ * {@link DragReorderListener#onItemLongClicked()}
  * <p>
  * move reorder
  * </p>
@@ -19,7 +19,7 @@ package com.gtja.tonywang.dragreordergridview.lib;
  * {@link DragReorderListener#onDragEnded()}
  * 
  * @author dongxinyu.dxy
- * 
+ * @author tonywang.wy
  */
 public interface DragReorderListener {
 
@@ -36,11 +36,23 @@ public interface DragReorderListener {
 	 * Notify when user long click the item and start to drag. Client should
 	 * probably make a vibration here to indicate long click
 	 */
-	public void onItemLongClicked();
+	public void onItemLongClicked(int position);
 
 	/**
 	 * Notify when user drops the item. Client should probably persistent the
 	 * reordered data.
 	 */
 	public void onDragEnded();
+
+	/**
+	 * Called when gridview item click
+	 */
+	public void onItemClicked(int position);
+
+	/**
+	 * Called when user click the action icon in edit mode, eg. delete an item
+	 * 
+	 * @param position
+	 */
+	public void onEditAction(int position);
 }

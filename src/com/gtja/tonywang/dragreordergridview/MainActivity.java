@@ -4,22 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.gtja.tonywang.dragreordergridview.lib.DragReorderGridView;
-import com.gtja.tonywang.dragreordergridview.lib.DragReorderListAdapter;
 import com.gtja.tonywang.dragreordergridview.lib.DragReorderListener;
-import com.gtja.tonywang.dragreordergridview.lib.EditActionListener;
 
 import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.BaseAdapter;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
@@ -28,9 +18,9 @@ public class MainActivity extends Activity {
 	private MyAdapter mAdapter;
 	private List<Item> mItems;
 
-	public String[] sCheeseStrings = { "沪深市场", "港股行情", "天汇宝2号", "融资融券", "新股发行",
-			"手机开户", "全部行情", "自选资讯", "港股通", "场内基金" };
-	public int[] sCheeseIcons = { R.drawable.ht_iggt, R.drawable.ht_ihssc,
+	private String[] sCheeseStrings = { "沪深市场", "港股行情", "天汇宝2号", "融资融券",
+			"新股发行", "手机开户", "全部行情", "自选资讯", "港股通", "场内基金" };
+	private int[] sCheeseIcons = { R.drawable.ht_iggt, R.drawable.ht_ihssc,
 			R.drawable.ht_iqbhq, R.drawable.ht_iqqhq, R.drawable.ht_irwz,
 			R.drawable.ht_irzrj, R.drawable.ht_isjkh, R.drawable.ht_ithbeh,
 			R.drawable.ht_iwdzx, R.drawable.ht_ixgsg };
@@ -46,49 +36,8 @@ public class MainActivity extends Activity {
 
 		mAdapter = new MyAdapter(mItems, this);
 		mGridView.setAdapter(mAdapter);
-		mGridView.setDragReorderListener(mDragReorderListener);
-		mGridView.setOnItemClickListener(new OnItemClickListener() {
-
-			@Override
-			public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
-					long arg3) {
-				Toast.makeText(MainActivity.this,
-						"click item " + mItems.get(pos).getLabel(),
-						Toast.LENGTH_SHORT).show();
-				if (mItems.get(pos).getLabel().equals("")) {
-					Item item = new Item();
-					item.setIcon(R.drawable.icon);
-					int insertPos = mItems.size() - 1;
-					item.setLabel("" + insertPos);
-					mItems.add(insertPos, item);
-					mAdapter.notifyDataSetChanged();
-				}
-			}
-		});
-
-		mGridView.enableEditMode(R.id.item_delete, new EditActionListener() {
-
-			@Override
-			public void onEditAction(int position) {
-
-				Toast.makeText(
-						MainActivity.this,
-						"deleting "
-								+ mAdapter.getData().get(position).getLabel(),
-						Toast.LENGTH_SHORT).show();
-				mAdapter.removeItem(position);
-				mAdapter.notifyDataSetChanged();
-			}
-		});
-	}
-
-	@Override
-	public void onBackPressed() {
-		if (mGridView.isDragEditMode()) {
-			mGridView.quitEditMode();
-			return;
-		}
-		super.onBackPressed();
+		mGridView
+				.setDragReorderListener(R.id.item_delete, mDragReorderListener);
 	}
 
 	private void initData() {
@@ -98,6 +47,9 @@ public class MainActivity extends Activity {
 			Item item = new Item();
 			item.setLabel(sCheeseStrings[i]);
 			item.setIcon(sCheeseIcons[i]);
+			if (i < 3) {
+				item.setRemovable(false);
+			}
 			mItems.add(item);
 		}
 
@@ -107,6 +59,15 @@ public class MainActivity extends Activity {
 		addBtn.setFixed(true);
 		mItems.add(addBtn);
 
+	}
+
+	@Override
+	public void onBackPressed() {
+		if (mGridView.isDragEditMode()) {
+			mGridView.quitEditMode();
+			return;
+		}
+		super.onBackPressed();
 	}
 
 	private DragReorderListener mDragReorderListener = new DragReorderListener() {
@@ -124,9 +85,35 @@ public class MainActivity extends Activity {
 		}
 
 		@Override
-		public void onItemLongClicked() {
+		public void onItemLongClicked(int position) {
 			Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 			v.vibrate(50);
+		}
+
+		@Override
+		public void onItemClicked(int position) {
+			if (mItems.get(position).getLabel().equals("")) {
+				Item item = new Item();
+				item.setIcon(R.drawable.icon);
+				int insertPos = mItems.size() - 1;
+				item.setLabel("" + insertPos);
+				mItems.add(insertPos, item);
+				mAdapter.notifyDataSetChanged();
+			} else {
+				Toast.makeText(MainActivity.this,
+						"click item " + mItems.get(position).getLabel(),
+						Toast.LENGTH_SHORT).show();
+			}
+		}
+
+		@Override
+		public void onEditAction(int position) {
+			Toast.makeText(MainActivity.this,
+					"deleting " + mAdapter.getData().get(position).getLabel(),
+					Toast.LENGTH_SHORT).show();
+			mAdapter.removeItem(position);
+			mAdapter.notifyDataSetChanged();
+
 		}
 
 	};
