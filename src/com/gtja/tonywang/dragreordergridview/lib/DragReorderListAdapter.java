@@ -1,0 +1,24 @@
+/**
+ * 
+ */
+package com.gtja.tonywang.dragreordergridview.lib;
+
+import android.widget.ListAdapter;
+
+/**
+ * Use this adapter intead of normal ListAdapter, in case of some item is not
+ * reorderable, eg. an special "+" or "more" button in the grid
+ * 
+ * @author dongxinyu.dxy
+ */
+public interface DragReorderListAdapter extends ListAdapter {
+
+	/**
+	 * 是否是可移动的item
+	 * 
+	 * @param position
+	 * @return
+	 */
+	public abstract boolean isReorderableItem(int position);
+
+}
