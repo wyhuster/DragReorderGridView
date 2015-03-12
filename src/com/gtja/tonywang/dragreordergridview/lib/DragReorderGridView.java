@@ -262,6 +262,7 @@ public class DragReorderGridView extends GridView {
 			return true;
 
 		case MotionEvent.ACTION_UP:
+			// 拖动的时候，如果真的拖动了位置，则放手时取消edit模式，不再允许delete
 			if (mLastDraggingPosition != mFirstDraggingPosition) {
 				quitEditMode();
 			}
