@@ -236,9 +236,11 @@ public class DragReorderGridView extends GridView {
 			mLastEventX = (int) event.getX();
 			mLastEventY = (int) event.getY();
 
+			mEnableItemClick = true;
 			if (!mIsEditMode) {
 				break;
 			}
+			// 在edit模式下，取消edit模式时不允许触发onItemClick
 			mEnableItemClick = false;
 			// layoutChildren();
 			// 在edit模式下,再action down则取消edit模式
